@@ -31,6 +31,16 @@ bool consume(char *op) {
   return true;
 }
 
+// 次のトークンが識別子のときは、トークンを1つ読み進めて識別子を返す。
+// それ以外のときには偽を返す。
+char consume_ident() {
+    if (token->kind != TK_IDENT)
+        return 0;
+    char ret = token->str[0];
+    token = token->next;
+    return ret;
+}
+
 // 次のトークンが期待している記号のときには、トークンを1つ読み進める。
 // それ以外の場合にはエラーを報告する。
 void expect(char *op) {
@@ -90,7 +100,7 @@ Token *tokenize() {
       continue;
     }
 
-    if (strchr("+-*/()<>", *p)) {
+    if (strchr("+-*/()<>=;", *p)) {
       cur = new_token(TK_RESERVED, cur, p++, 1);
       continue;
     }
@@ -101,6 +111,13 @@ Token *tokenize() {
       cur->val = strtol(p, &p, 10);
       cur->len = p - q;
       continue;
+    }
+
+    // 小文字1文字の変数
+    if ('a' <= *p && *p <= 'z') {
+        cur = new_token(TK_IDENT, cur, p++, 0);
+        cur->len = 1;
+        continue;
     }
 
     error_at(p, "トークナイズできません");

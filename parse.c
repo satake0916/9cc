@@ -6,6 +6,9 @@ Token *token;
 // 入力プログラム
 char *user_input;
 
+/**
+ * ノード生成関数
+*/
 Node *new_node(NodeKind kind, Node *lhs, Node *rhs) {
   Node *node = calloc(1, sizeof(Node));
   node->kind = kind;
@@ -21,9 +24,40 @@ Node *new_node_num(int val) {
   return node;
 }
 
-Node *expr() {
-  Node *node = equality();
+Node *new_node_ident(char ident) {
+    Node *node = calloc(1, sizeof(Node));
+    node->kind = ND_LVAR;
+    node->offset = (ident - 'a' + 1) * 8;
+    return node;
+}
 
+
+/**
+ * パース関数
+*/
+Node *code[100];
+
+void program() {
+  int i = 0;
+  while (!at_eof())
+    code[i++] = stmt();
+  code[i] = NULL;
+}
+
+Node *stmt() {
+  Node *node = expr();
+  expect(";");
+  return node;
+}
+
+Node *expr() {
+  return assign();
+}
+
+Node *assign() {
+  Node *node = equality();
+  if (consume("="))
+    node = new_node(ND_ASSIGN, node, assign());
   return node;
 }
 
@@ -97,6 +131,12 @@ Node *primary() {
     Node *node = expr();
     expect(")");
     return node;
+  }
+
+  // 変数か
+  char c = consume_ident();
+  if (c) {
+    return new_node_ident(c);
   }
 
   // そうでなければ数値のはず
