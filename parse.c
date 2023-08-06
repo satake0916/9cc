@@ -6,6 +6,9 @@ Token *token;
 // 入力プログラム
 char *user_input;
 
+LVar *locals;
+
+
 /**
  * ノード生成関数
 */
@@ -24,24 +27,56 @@ Node *new_node_num(int val) {
   return node;
 }
 
-Node *new_node_ident(char ident) {
+Node *new_node_lvar(LVar *lvar) {
     Node *node = calloc(1, sizeof(Node));
     node->kind = ND_LVAR;
-    node->offset = (ident - 'a' + 1) * 8;
+    node->lvar = lvar;
     return node;
+}
+
+LVar *new_lvar() {
+    LVar *lvar = calloc(1, sizeof(LVar));
+    lvar->next = locals;
+    lvar->name = token->str;
+    lvar->len = token->len;
+    lvar->offset = locals->offset + 8;
+    locals = lvar;
+    return lvar;
+}
+
+/**
+ * ユーティリティ
+*/
+// 変数を名前で検索する。見つからなかった場合はNULLを返す。
+LVar *find_lvar() {
+  for (LVar *var = locals; var; var = var->next)
+    if (var->len == token->len && !memcmp(token->str, var->name, var->len))
+      return var;
+  return NULL;
 }
 
 
 /**
  * パース関数
 */
-Node *code[100];
 
-void program() {
-  int i = 0;
-  while (!at_eof())
-    code[i++] = stmt();
-  code[i] = NULL;
+Function *program() {
+    Node head = {};
+    Node *cur = &head;
+
+    LVar lhead = {};
+    lhead.offset = 0;
+    locals = &lhead;
+
+  while (!at_eof()){
+    cur = cur->next = stmt();
+  }
+    Function *func = calloc(1, sizeof(Function));
+    func->body = head.next;
+    func->locals = locals->next;
+    // func->stack_size = (stack_size + 15 ) / 16 * 16;
+    func->stack_size = locals->offset;
+    return func;
 }
 
 Node *stmt() {
@@ -56,8 +91,9 @@ Node *expr() {
 
 Node *assign() {
   Node *node = equality();
-  if (consume("="))
+  if (consume("=")) {
     node = new_node(ND_ASSIGN, node, assign());
+  }
   return node;
 }
 
@@ -134,10 +170,14 @@ Node *primary() {
   }
 
   // 変数か
-  char c = consume_ident();
-  if (c) {
-    return new_node_ident(c);
-  }
+    if (consume_ident()) {
+        LVar *lvar = find_lvar();
+        if (!lvar) {
+            lvar = new_lvar();
+        }
+        token = token->next;
+        return new_node_lvar(lvar);
+    }
 
   // そうでなければ数値のはず
   return new_node_num(expect_number());

@@ -33,12 +33,12 @@ struct Token {
 
 void error_at(char *loc, char *fmt, ...);
 bool consume(char *op);
-char consume_ident();
+bool consume_ident();
 void expect(char *op);
 int expect_number();
 bool at_eof();
 Token *new_token(TokenKind kind, Token *cur, char *str, int len);
-Token *tokenize();
+void tokenize(char *p);
 
 
 /**
@@ -60,17 +60,37 @@ typedef enum {
 } NodeKind;
 
 typedef struct Node Node;
+typedef struct LVar LVar;
 
 // 抽象構文木のノードの型
 struct Node {
+    Node *next;
   NodeKind kind; // ノードの型
   Node *lhs;     // 左辺
   Node *rhs;     // 右辺
   int val;       // kindがND_NUMの場合のみ使う
-  int offset;    // kindがND_LVARの場合のみ使う
+  LVar *lvar;    // kindがND_LVARの場合のみ使う
 };
 
-void program();
+// ローカル変数の型
+struct LVar {
+  LVar *next; // 次の変数かNULL
+  char *name; // 変数の名前
+  int len;    // 名前の長さ
+  int offset; // RBPからのオフセット
+};
+
+typedef struct Function Function;
+struct Function {
+  Node *body;
+  LVar *locals;
+  int stack_size;
+};
+
+// ローカル変数
+// extern LVar *locals;
+
+Function *program();
 Node *stmt();
 Node *expr();
 Node *assign();
@@ -85,8 +105,7 @@ Node *primary();
 /**
  * codegen.c
 */
-void gen(Node *node);
-
+void codegen(Function *func);
 
 /**
  * グローバル変数
@@ -96,6 +115,3 @@ extern Token *token;
 
 // 入力プログラム
 extern char *user_input;
-
-// パースした結果
-extern Node *code[100];

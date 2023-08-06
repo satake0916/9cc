@@ -47,5 +47,7 @@ assert 5 "a=3; b = 5; b;"
 assert 2 "a=b=2;"
 assert 3 "a=3; b = 1; a + b / 2;"
 assert 2 "a=3; b = 1; (a + b) / 2;"
+assert 3 'foo=3; foo;'
+assert 8 'foo=3; bar=5; foo+bar;'
 
 echo OK

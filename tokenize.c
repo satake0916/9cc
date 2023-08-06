@@ -31,14 +31,11 @@ bool consume(char *op) {
   return true;
 }
 
-// 次のトークンが識別子のときは、トークンを1つ読み進めて識別子を返す。
-// それ以外のときには偽を返す。
-char consume_ident() {
+bool consume_ident() {
     if (token->kind != TK_IDENT)
-        return 0;
-    char ret = token->str[0];
-    token = token->next;
-    return ret;
+        return false;
+    // token = token->next;
+    return true;
 }
 
 // 次のトークンが期待している記号のときには、トークンを1つ読み進める。
@@ -79,9 +76,13 @@ bool startswith(char *p, char *q) {
   return memcmp(p, q, strlen(q)) == 0;
 }
 
+bool is_ident_valid_char(char c) {
+  return ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z') || c == '_';
+}
+
 // 入力文字列pをトークナイズしてそれを返す
-Token *tokenize() {
-  char *p = user_input;
+void tokenize(char *p) {
+  user_input = p;
   Token head;
   head.next = NULL;
   Token *cur = &head;
@@ -114,9 +115,13 @@ Token *tokenize() {
     }
 
     // 小文字1文字の変数
-    if ('a' <= *p && *p <= 'z') {
-        cur = new_token(TK_IDENT, cur, p++, 0);
-        cur->len = 1;
+    if (is_ident_valid_char(*p)) {
+        cur = new_token(TK_IDENT, cur, p, 0);
+        char *q = p;
+        do {
+            p++;
+        } while (is_ident_valid_char(*p));
+        cur->len = p - q;
         continue;
     }
 
@@ -124,5 +129,5 @@ Token *tokenize() {
   }
 
   new_token(TK_EOF, cur, p, 0);
-  return head.next;
+  token = head.next;
 }
